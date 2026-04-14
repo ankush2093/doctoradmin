@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdminUser;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
@@ -17,17 +18,38 @@ class AdminUserController extends Controller
             $validator = Validator::make($request->all(), [
                 'userName'  => 'required|string|max:30|unique:admin_users',
                 'password'  => 'required|string|min:6',
-                'adminRole' => 'required|exists:roles,id',
+                'adminRole' => 'nullable|exists:roles,id',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['success'=>false, 'message' => 'Validation error.', 'errors'=>$validator->errors()], 422);
             }
 
+            $resolvedRoleId = $request->adminRole;
+
+            if (!$resolvedRoleId) {
+                $existingAdminRole = Role::where('roleType', 'admin')->first();
+
+                if ($existingAdminRole) {
+                    $resolvedRoleId = $existingAdminRole->id;
+                } else {
+                    $firstRole = Role::first();
+
+                    if ($firstRole) {
+                        $resolvedRoleId = $firstRole->id;
+                    } else {
+                        $newRole = Role::create([
+                            'roleType' => 'admin',
+                        ]);
+                        $resolvedRoleId = $newRole->id;
+                    }
+                }
+            }
+
             $user = AdminUser::create([
                 'userName'  => $request->userName,
                 'password'  => Hash::make($request->password),
-                'adminRole' => $request->adminRole,
+                'adminRole' => $resolvedRoleId,
                 'isActive'  => true,
             ]);
 
