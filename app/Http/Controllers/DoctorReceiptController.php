@@ -55,10 +55,10 @@ class DoctorReceiptController extends Controller
         }
     }
 
-    public function getReceiptById($id)
+    public function getReceiptById(int $id)
     {
         try {
-            $receipt = $this->doctorReceiptService->getReceiptById((int) $id);
+            $receipt = $this->doctorReceiptService->getReceiptById($id);
 
             return response()->json([
                 'success' => true,
@@ -78,10 +78,10 @@ class DoctorReceiptController extends Controller
         }
     }
 
-    public function updateReceipt(Request $request, $id)
+    public function updateReceipt(Request $request, int $id)
     {
         try {
-            $receipt = $this->doctorReceiptService->updateReceipt($request, (int) $id);
+            $receipt = $this->doctorReceiptService->updateReceipt($request, $id);
 
             return response()->json([
                 'success' => true,
@@ -106,10 +106,10 @@ class DoctorReceiptController extends Controller
         }
     }
 
-    public function deleteReceipt($id)
+    public function deleteReceipt(int $id)
     {
         try {
-            $this->doctorReceiptService->deleteReceipt((int) $id);
+            $this->doctorReceiptService->deleteReceipt($id);
 
             return response()->json([
                 'success' => true,

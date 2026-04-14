@@ -18,6 +18,9 @@ class DoctorReceiptService
     {
         $validator = Validator::make($request->all(), [
             'receipt' => 'required|file|mimes:jpeg,png,jpg,pdf',
+            'receipt_no' => 'nullable|string|max:255',
+            'created_by' => 'nullable|integer|min:1',
+            'is_active' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -25,10 +28,16 @@ class DoctorReceiptService
         }
 
         $fileName = $this->storeReceiptFile($request->file('receipt'));
+        $createdBy = $request->filled('created_by')
+            ? (int) $request->input('created_by')
+            : optional($request->user())->id;
 
         $receipt = DoctorReceipt::create([
             'receipt' => $fileName,
-            'is_active' => true,
+            'receipt_url' => $this->buildReceiptUrl($fileName),
+            'receipt_no' => $request->input('receipt_no'),
+            'created_by' => $createdBy,
+            'is_active' => $request->has('is_active') ? $request->boolean('is_active') : true,
         ]);
 
         return $this->formatReceipt($receipt);
@@ -67,6 +76,8 @@ class DoctorReceiptService
 
         $validator = Validator::make($request->all(), [
             'receipt' => 'sometimes|file|mimes:jpeg,png,jpg,pdf',
+            'receipt_no' => 'sometimes|nullable|string|max:255',
+            'created_by' => 'sometimes|nullable|integer|min:1',
             'is_active' => 'sometimes|boolean',
         ]);
 
@@ -77,6 +88,19 @@ class DoctorReceiptService
         if ($request->hasFile('receipt')) {
             $this->deleteReceiptFile($receipt->receipt);
             $receipt->receipt = $this->storeReceiptFile($request->file('receipt'));
+            $receipt->receipt_url = $this->buildReceiptUrl($receipt->receipt);
+        } elseif (!$receipt->receipt_url && $receipt->receipt) {
+            $receipt->receipt_url = $this->buildReceiptUrl($receipt->receipt);
+        }
+
+        if ($request->exists('receipt_no')) {
+            $receipt->receipt_no = $request->input('receipt_no');
+        }
+
+        if ($request->exists('created_by')) {
+            $receipt->created_by = $request->filled('created_by')
+                ? (int) $request->input('created_by')
+                : null;
         }
 
         if ($request->has('is_active')) {
@@ -128,7 +152,15 @@ class DoctorReceiptService
 
     private function formatReceipt(DoctorReceipt $receipt): DoctorReceipt
     {
-        $receipt->receipt_url = $receipt->receipt ? url(self::PUBLIC_PATH_PREFIX . $receipt->receipt) : null;
+        if (!$receipt->receipt_url && $receipt->receipt) {
+            $receipt->receipt_url = $this->buildReceiptUrl($receipt->receipt);
+        }
+
         return $receipt;
+    }
+
+    private function buildReceiptUrl(string $fileName): string
+    {
+        return url(self::PUBLIC_PATH_PREFIX . $fileName);
     }
 }
